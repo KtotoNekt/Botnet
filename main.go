@@ -99,15 +99,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 			}
 
-			fmt.Println(commands)
-
 			if len(commands) == 1 {
 				s.ChannelMessageSend(Console, "Введите ссылку на файл")
 				return
 			}
 
 			for _, url := range commands[1:] {
-				fmt.Println(url)
 				resp, err := http.Get(url)
 
 				if err != nil {
