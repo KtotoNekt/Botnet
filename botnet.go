@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -44,11 +42,8 @@ func main() {
 		return
 	}
 
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-sc
-
-	dg.Close()
+	for true {
+	}
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
