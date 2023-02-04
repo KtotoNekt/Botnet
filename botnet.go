@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -16,8 +17,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+//go:embed token.txt
+var Token string
+
 var (
-	Token    string = ""
 	Prefix   string = "!"
 	hostname string
 	Console  string
