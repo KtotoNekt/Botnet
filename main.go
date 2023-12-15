@@ -28,14 +28,15 @@ var (
 func main() {
 	hostname, _ = os.Hostname()
 
-	dg, err := discordgo.New("Bot " + Token)
+	dg, err := discordgo.New("Bot " + strings.TrimSpace(Token))
 	if err != nil {
+		fmt.Printf("Error new bot")
 		return
 	}
 
 	dg.AddHandler(messageCreate)
 
-	dg.Identify.Intents = discordgo.IntentsGuildMessages
+	dg.Identify.Intents = discordgo.IntentsAll
 
 	err = dg.Open()
 	if err != nil {
